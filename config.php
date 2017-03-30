@@ -4,9 +4,7 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-define('APP_ID', '*******');
-define('APP_SECRET', '*******');
-define('APP_VERSION', 'v2.8');
+require_once(__DIR__ . '/secret_config.php');
 
 define('DSN', 'mysql:host=localhost;dbname=dotinstall_fb_connect_php');
 define('DB_USERNAME', 'dbuser');

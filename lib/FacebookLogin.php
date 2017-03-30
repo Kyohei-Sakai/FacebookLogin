@@ -13,12 +13,71 @@ class FacebookLogin {
     ]);
   }
 
+  public function isLoggedIn() {
+    return isset($_SESSION['me']) && !empty($_SESSION['me']);
+  }
+
   public function login() {
+    if ($this->isLoggedIn()) {
+      goHome();
+    };
+
     $helper = $this->_fb->getRedirectLoginHelper();
 
-    $loginUrl = $helper->getLoginUrl(CALlBACK_URL);
-    header('Location: ' . $loginUrl);
+    // get access token
+    try {
+      $accessToken = $helper->getAccessToken();
+    } catch (\Facebook\Exceptions\FacebookResposeException $e) {
+      echo 'Response Error: ' . $e->getMessage();
+      exit;
+    } catch (\Facebook\Exceptions\FacebookSDKException $e) {
+      echo 'SDK Error1: ' . $e->getMessage();
+      exit;
+    }
+
+    if (isset($accessToken)) {
+      // save user
+      // var_dump($accessToken);
+
+      if (!$accessToken->isLonglived()) {
+        try {
+          $accessToken = $this->_fb->getOAuth2Client()->getLongLivedAccessToken($accessToken);
+        } catch (\Facebook\Exceptions\FacebookSDKException $e) {
+          echo 'LongLived Access Token Error: ' . $e->getMessage();
+          exit;
+        }
+      }
+
+      // var_dump($accessToken->isLonglived());
+      // exit;
+
+      $this->_save('$accessToken');
+      goHome();
+    } elseif ($helper->getError()) {
+      goHome();
+    } else {
+      $permission = ['email', 'user_posts'];
+      $loginUrl = $helper->getLoginUrl(CALlBACK_URL, $permission);
+      header('Location: ' . $loginUrl);
+    }
     exit;
+  }
+
+  private function _save($accessToken) {
+    // get user info
+    $fb = new Facebook($accessToken);
+    $userNode = $fb->getUserNode();
+    // var_dump($userNode); exit;
+
+    // save user
+    $user = new User();
+    $me = $user->save($accessToken, $userNode);
+    // var_dump($me);
+    // exit;
+
+    // login
+    session_regenerate_id(true);  // session hijack
+    $_SESSION['me'] = $me;
   }
 
 }
